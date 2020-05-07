@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import struct
@@ -16,10 +16,10 @@ bufferSize = 0x20000
 def expect(result, verifyList):
   resultList = result.tolist()
   if resultList != verifyList:
-    print >> sys.stderr, "Warning: Expected " + str(verifyList) + " but got " + str(resultList)
+    print("Warning: Expected " + str(verifyList) + " but got " + str(resultList), file=sys.stderr)
 
 def storageToDisplay(dev):
-  print "Setting device to display mode"
+  print("Setting device to display mode")
   try:
     dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0xfe, 0xfe, 254)
   except usb.core.USBError as e:
@@ -28,7 +28,7 @@ def storageToDisplay(dev):
       raise e
 
 def displayModeSetup(dev):
-  print "Sending setup commands to device"
+  print("Sending setup commands to device")
   result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x04, 0x00, 0x00, 1)
   expect(result, [ 0x03 ])
 #  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x01, 0x00, 0x00, 2)
@@ -53,9 +53,11 @@ def writeImage(dev):
 #  result = dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x0301, 0x0409, 255)
 
   if len(sys.argv) < 2 or sys.argv[1] == "-":
-    content = sys.stdin.read()
+    print("Reading file from stdin")
+    content = sys.stdin.buffer.read()
   else:
-    f = open(sys.argv[1])
+    print("Reading from file " + sys.argv[1])
+    f = open(sys.argv[1], "rb")
     content = f.read()
     f.close()
 
@@ -70,16 +72,16 @@ def writeImage(dev):
     chunkyWrite(dev, buf)
     pos += bufferSize
 
-  
+
 #  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x00, 0x00, 2)
 #  expect(result, [ 0x00, 0x00 ])
 
 found = False
 
-for k, v in models.iteritems():
+for k, v in models.items():
   dev = usb.core.find(idVendor=vendorId, idProduct=v[0])
   if dev:
-    print "Found " + k + " in storage mode"
+    print("Found " + k + " in storage mode")
     storageToDisplay(dev)
     time.sleep(1)
     dev = usb.core.find(idVendor=vendorId, idProduct=v[1])
@@ -87,12 +89,12 @@ for k, v in models.iteritems():
   if not dev:
     dev = usb.core.find(idVendor=vendorId, idProduct=v[1])
   if dev:
-    print "Found " + k + " in display mode"
+    print("Found " + k + " in display mode")
     dev.set_configuration()
     displayModeSetup(dev)
     writeImage(dev)
     found = True
 
 if not found:
-  print >> sys.stderr, "No supported devices found"
+  print("No supported devices found", file=sys.stderr)
   sys.exit(-1)
