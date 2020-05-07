@@ -8,7 +8,16 @@ import usb.core
 from usb.util import *
 
 vendorId = 0x04e8
-models = {'SPF-87H': (0x2033, 0x2034), 'SPF-107H': (0x2027, 0x2028) }
+models = {
+  'SPF-72H': (0x200a, 0x200b),
+  'SPF-75H': (0x200e, 0x200f),
+  'SPF-83H': (0x200c, 0x200d),
+  'SPF-85H': (0x2012, 0x2013),
+  'SPF-87H': (0x2033, 0x2034),
+  'SPF-87H (old firmware)': (0x2025, 0x2026),
+  'SPF-107H': (0x2035, 0x2036),
+  'SPF-107H (old firmware)': (0x2027, 0x2028)
+}
 
 chunkSize = 0x4000
 bufferSize = 0x20000
@@ -70,7 +79,7 @@ def writeImage(dev):
     chunkyWrite(dev, buf)
     pos += bufferSize
 
-  
+
 #  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x00, 0x00, 2)
 #  expect(result, [ 0x00, 0x00 ])
 
