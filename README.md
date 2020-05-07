@@ -15,9 +15,15 @@ Features
 Supported photo frames
 ----------------------
 
-* SPF-107H (not tested)
+* SPF-72H (not tested)
+* SPF-75H (not tested)
+* SPF-83H
+* SPF-85H (not tested)
 * SPF-87H
+* SPF-107H (not tested)
 * (In theory) Other similar Samsung photo frames should work once their product IDs are added into the code
+
+[Thanks to MOA-2011 for listing various product IDs.](https://github.com/MOA-2011/3rdparty-plugins/blob/f11349bc643ac9664276734897c6ab9a4e1d58ba/LCD4linux/src/Photoframe.py).
 
 Dependencies
 ------------
