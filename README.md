@@ -36,13 +36,21 @@ Dependencies
 Usage
 -----
 
-### Show JPEG image with the exactly correct size in photo frame
+Show JPEG image with the exactly correct size in photo frame:
 
 `sudo ./frame-ctrl.py my_correctly_scaled_image.jpg`
 
 or
 
 `cat my_correctly_scaled_image.jpg | sudo ./frame-ctrl.py`
+
+Start a slideshow with images from a directory:
+
+`python -m scripts.slideshow -i <image interval> <directory with images to show>
+
+Capture a window from X11 and show on photoframe:
+
+`python -m scripts.capture_winodow`
 
 FAQ
 ---
