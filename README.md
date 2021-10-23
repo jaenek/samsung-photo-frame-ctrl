@@ -1,22 +1,24 @@
 Samsung photo frame control
-=================
+---------------------------
 
 A small Python application for controlling Samsung photo frames.
 
-Based on the work of [Grace Woo & others](http://web.media.mit.edu/~gracewoo/stuff/picframe/). One large difference is that my application adds an extra control message that prevents the photo frame from exiting mini display mode.
+Based on:
+* [Grace Woo's work](https://web.archive.org/web/20111006080636/http://web.media.mit.edu/~gracewoo/stuff/picframe/)
+* [Gekkio's adaptation](https://github.com/Gekkio/samsung-photo-frame-ctrl/)
+* [erictroebs changes](https://github.com/erictroebs/samsung-photo-frame-ctrl/)
 
 Features
 --------
 
 * If a photo frame is in mass storage mode, the program will change it into mini display mode.
 * If a photo frame is in mini display mode, the program will send the jpeg that was specified as the program argument to the photo frame. *The JPEG must be prescaled to the exactly correct size!*
-* window-in-frame.sh which shows a user selected application window in the photo frame (needs Imagemagick!)
 
 Supported photo frames
 ----------------------
 
 * SPF-72H (not tested)
-* SPF-75H (not tested)
+* SPF-75H
 * SPF-83H
 * SPF-85H (not tested)
 * SPF-87H
@@ -28,7 +30,8 @@ Supported photo frames
 Dependencies
 ------------
 
-* [pyusb 1.0](http://sourceforge.net/apps/mediawiki/pyusb) (This is an alpha quality library so it is *not* the one usually packaged in linux distributions. For example, the normal Ubuntu version of python-usb won't work!). **Update:** [Experimental Ubuntu PPA packages for Lucid/Maverick/Natty](http://launchpad.net/~gekkio/+archive/pyusb)
+* [pyusb 1.0](http://github.com/pyusb/pyusb) - usb library for python.
+* [imagemagick](https://imagemagick.org/) (Optional for scripts) - excellent tool for converting images on the cli.
 
 Usage
 -----
@@ -40,14 +43,6 @@ Usage
 or
 
 `cat my_correctly_scaled_image.jpg | sudo ./frame-ctrl.py`
-
-### Automatically scale an image and show it in the photo frame (needs Imagemagick). _Replace 800x480 with the correct resolution for your device_
-
-`cat some_image_supported_by_imagemagick | convert - -resize 800x480 - | montage - -background black -geometry 800x480 jpeg:- | sudo ./frame-ctrl.py`
-
-### Show an application window in photo frame (needs Imagemagick). _Replace 800x480 in window-in-frame.sh with the correct resolution for your device_
-
-`sudo ./window-in-frame.sh` and click on an application window to select it
 
 FAQ
 ---

@@ -1,109 +1,143 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import os
 import struct
 import sys
 import time
 import usb.core
-from usb.util import *
+from usb.util import CTRL_TYPE_STANDARD, CTRL_TYPE_VENDOR, CTRL_IN, CTRL_RECIPIENT_DEVICE
 
-vendorId = 0x04e8
-models = {
-  'SPF-72H': (0x200a, 0x200b),
-  'SPF-75H': (0x200e, 0x200f),
-  'SPF-83H': (0x200c, 0x200d),
-  'SPF-85H': (0x2012, 0x2013),
-  'SPF-87H': (0x2033, 0x2034),
-  'SPF-87H (old firmware)': (0x2025, 0x2026),
-  'SPF-107H': (0x2035, 0x2036),
-  'SPF-107H (old firmware)': (0x2027, 0x2028)
+VENDOR_ID= 0x04e8
+MODELS = {
+    'SPF-72H': {
+        'product_id': (0x200a, 0x200b),
+        'resolution': '800x480',
+    },
+    'SPF-75H': {
+        'product_id': (0x200e, 0x200f),
+        'resolution': '800x480',
+    },
+    'SPF-83H': {
+        'product_id': (0x200c, 0x200d),
+        'resolution': '800x480',
+    },
+    'SPF-85H': {
+        'product_id': (0x2012, 0x2013),
+        'resolution': '800x480',
+    },
+    'SPF-87H': {
+        'product_id': (0x2033, 0x2034),
+        'resolution': '800x480',
+    },
+    'SPF-87H (old firmware)': {
+        'product_id': (0x2025, 0x2026),
+        'resolution': '800x480',
+    },
+    'SPF-107H': {
+        'product_id': (0x2035, 0x2036),
+        'resolution': '800x480',
+    },
+    'SPF-107H (old firmware)': {
+        'product_id': (0x2027, 0x2028),
+        'resolution': '800x480',
+    },
 }
 
-chunkSize = 0x4000
-bufferSize = 0x20000
+CHUNK_SIZE = 0x4000
+BUFFER_SIZE = 0x20000
 
-def expect(result, verifyList):
-  resultList = result.tolist()
-  if resultList != verifyList:
-    print("Warning: Expected " + str(verifyList) + " but got " + str(resultList), file=sys.stderr)
+def expect(result, expected):
+    results = result.tolist()
+    if results != expected:
+        print("Warning: Expected " + str(expected) + " but got " + str(results), file=sys.stderr)
 
-def storageToDisplay(dev):
-  print("Setting device to display mode")
-  try:
-    dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0xfe, 0xfe, 254)
-  except usb.core.USBError as e:
-    errorStr = str(e)
-    if errorStr != 'No such device (it may have been disconnected)':
-      raise e
+class FrameController():
+    def __init__(self):
+        for model, info in MODELS.items():
+            self.dev = usb.core.find(idVendor=VENDOR_ID, idProduct=info['product_id'][0])
+            if self.dev:
+                print("Found " + model + " in storage mode")
+                self.change_mode()
+                time.sleep(1)
+                self.dev = usb.core.find(idVendor=VENDOR_ID, idProduct=info['product_id'][1])
+            else:
+                self.dev = usb.core.find(idVendor=VENDOR_ID, idProduct=info['product_id'][1])
 
-def displayModeSetup(dev):
-  print("Sending setup commands to device")
-  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x04, 0x00, 0x00, 1)
-  expect(result, [ 0x03 ])
-#  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x01, 0x00, 0x00, 2)
-#  expect(result, [ 0x09, 0x04 ])
-#  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x02, 0x00, 0x00, 1)
-#  expect(result, [ 0x46 ])
+            if self.dev:
+                print("Found " + model + " in display mode")
+                self.current_model = model
+                self.dev.set_configuration()
+                self.display_mode_setup()
+                return
 
-def paddedBytes(buf, size):
-  diff = size - len(buf)
-  return buf + bytes(b'\x00') * diff
+        print("No supported devices found", file=sys.stderr)
+        sys.exit(-1)
 
-def chunkyWrite(dev, buf):
-  pos = 0
-  while pos < bufferSize:
-    dev.write(0x02, buf[pos:pos+chunkSize])
-    pos += chunkSize
+    def change_mode(self):
+        print("Setting device to display mode")
+        try:
+            self.dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0xfe, 0xfe, 254)
+            print(self.dev)
+        except usb.core.USBError as e:
+            # Ignore Input/Output Error since the device will now be disconnected
+            if e.errno != 5:
+                raise e
 
-def writeImage(dev):
-#  result = dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x0300, 0x00, 255)
-#  expect(result, [ 0x04, 0x03, 0x09, 0x04 ])
+    def display_mode_setup(self):
+        print("Sending setup commands to device")
+        if self.current_model in ('SPF-72H', 'SPF-83H', 'SPF-85H', 'SPF-87H', 'SPF-107H'):
+            result = self.dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x04, 0x00, 0x00, 1)
+            expect(result, [ 0x03 ])
+        elif self.current_model in ('SPF-75H'):
+            result = self.dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x01, 0x00, 0x00, 2)
+            expect(result, [ 0x09, 0x04 ])
+        else:
+            result = self.dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x02, 0x00, 0x00, 1)
+            expect(result, [ 0x46 ])
 
-#  result = dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x0301, 0x0409, 255)
+    def padded_bytes(self, buf, size):
+        diff = size - len(buf)
+        return buf + bytes(b'\x00') * diff
 
-  if len(sys.argv) < 2 or sys.argv[1] == "-":
-    print("Reading file from stdin")
-    content = sys.stdin.buffer.read()
-  else:
-    print("Reading from file " + sys.argv[1])
-    f = open(sys.argv[1], "rb")
-    content = f.read()
-    f.close()
+    def chunky_write(self, buf):
+        pos = 0
+        while pos < BUFFER_SIZE:
+            self.dev.write(0x02, buf[pos:pos+CHUNK_SIZE])
+            pos += CHUNK_SIZE
 
-  size = struct.pack('I', len(content))
-  header = b'\xa5\x5a\x09\x04' + size + b'\x46\x00\x00\x00'
-
-  content = header + content
-
-  pos = 0
-  while pos < len(content):
-    buf = paddedBytes(content[pos:pos+bufferSize], bufferSize)
-    chunkyWrite(dev, buf)
-    pos += bufferSize
+    def write_image(self, content):
+#        result = self.dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x0300, 0x00, 255)
+#        expect(result, [ 0x04, 0x03, 0x09, 0x04 ])
 
 
-#  result = dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x00, 0x00, 2)
-#  expect(result, [ 0x00, 0x00 ])
+        if self.current_model in ('SPF-75H'):
+            result = self.dev.ctrl_transfer(CTRL_TYPE_STANDARD | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x0301, 0x0409, 255)
 
-found = False
+        size = struct.pack('I', len(content))
+        header = b'\xa5\x5a\x09\x04' + size + b'\x46\x00\x00\x00'
 
-for k, v in models.items():
-  dev = usb.core.find(idVendor=vendorId, idProduct=v[0])
-  if dev:
-    print("Found " + k + " in storage mode")
-    storageToDisplay(dev)
-    time.sleep(1)
-    dev = usb.core.find(idVendor=vendorId, idProduct=v[1])
-    found = True
-  if not dev:
-    dev = usb.core.find(idVendor=vendorId, idProduct=v[1])
-  if dev:
-    print("Found " + k + " in display mode")
-    dev.set_configuration()
-    displayModeSetup(dev)
-    writeImage(dev)
-    found = True
+        content = header + content
 
-if not found:
-  print("No supported devices found", file=sys.stderr)
-  sys.exit(-1)
+        pos = 0
+        while pos < len(content):
+            buf = self.padded_bytes(content[pos:pos+BUFFER_SIZE], BUFFER_SIZE)
+            self.chunky_write(buf)
+            pos += BUFFER_SIZE
+
+
+#        result = self.dev.ctrl_transfer(CTRL_TYPE_VENDOR | CTRL_IN | CTRL_RECIPIENT_DEVICE, 0x06, 0x00, 0x00, 2)
+#        expect(result, [ 0x00, 0x00 ])
+
+if __name__ == '__main__':
+    frame_ctrl = FrameController()
+
+    if len(sys.argv) < 2 or sys.argv[1] == "-":
+        print("Reading file from stdin")
+        content = sys.stdin.buffer.read()
+    else:
+        print("Reading from file " + sys.argv[1])
+        f = open(sys.argv[1], "rb")
+        content = f.read()
+        f.close()
+
+    frame_ctrl.write_image(content)
